@@ -1,0 +1,137 @@
+%% Danish Rafiq and Asif Hamid  
+% File Crerated on 19.2.2022
+% Recovers system parameters of power-grid models using Sindy
+%   Ref:
+%   [1] T. Nishikawa and A. E. Motter, Comparative analysis of existing
+%       models for power-grid synchronization, New J. Phys. 17, 015012 (2015).
+%
+%   [2] A. E. Motter, S. A. Myers, M. Anghel, and T. Nishikawa, Spontaneous
+%       synchrony in power-grid networks, Nat. Phys. 9, 191-197 (2013).
+%
+%   [3] Danish Rafiq, Junaid Farooq and M. A. Bazaz, Synergistic use of intrusive and non-intrusive model order
+%       reduction techniques for dynamical power grids (2022)
+%
+%   [4] Sparse identification of non linear dynamic systems SL Brunton (2016)
+%% Initialize the IEEE Power System (Load data)
+clear;clc;close all
+mpc=case57;        % 4gs, 57, 118, 145, 300, 1888, 2736sp, test_system_10gen (see data file)
+mpc.ref_freq=60;  % reference frequency
+global data 
+[data,details]=EN_model(mpc); %EN, SM (H,D,A,K,gamma,omega_R)
+n_oc=length(data.H); %No of oscillators (FOM Size =2*n_oc)
+dt=0.001;tf=5;
+tspan=dt:dt:tf;
+%  (Full Order model (converted to first order)
+f= @(x) power_func(x);
+xdotNL= @(t,x) f(x);
+%x0=[0.6*ones(n_oc,1); 0.6*ones(n_oc,1)];  %(0.2-0.2) & (0.5-0.5) & (0.6-0.6) & (1-1)
+%%%%%%%%%% range of initial conditions
+x0list = [0]; % need more data to ID
+x0list2 = [0]; % need more data to ID
+delta = [];
+omega = [];
+for i = 1:length(x0list)
+    x0= [x0list(i)*ones(n_oc,1); x0list2(i)*ones(n_oc,1)]; 
+    [tFOM,xFOM]=ode45(xdotNL,tspan,x0);
+    delta = [delta; xFOM(:,1:n_oc)];
+    omega = [omega; xFOM(:,n_oc+1:end)];
+end
+D=data.D;
+H=data.H;
+A=data.A;
+gamma=data.gamma;
+K=data.K;
+omega_R=data.omega_R;
+Mi=-D./(2*H);
+Di=omega_R./(2*H).*A;
+disp('Snapshots recorded')
+% POD
+% X=xFOM'; Opts.NoSV = 8;
+% [xdotr,x0r,Vpod] = POD(X, xdotNL,x0,Opts);
+% [tROM,xROM]=ode45(xdotr,tspan,x0r);
+% xPOD=Vpod*xROM'; 
+%yPOD=C*xPOD./n_oc;
+%  subplot(1,2,1)
+%  surf(xFOM); shading interp
+%  subplot(1,2,2)
+%  surf(xPOD'); shading interp
+%  figure()
+%  plot(tFOM,xFOM,'k',tFOM, xPOD,'r--')
+%plot(tFOM,X(1:3,:),tFOM, xPOD(1:3,:),'k--')
+
+
+% SinDy 
+N=n_oc;
+x=omega;
+%dxx=zeros(size(x));
+%create dx using finite-difference scheme
+% for i=1:size(x,2)
+%     dxx(1,i)=(x(2,i)-x(1,i))/dt;
+%     dxx(end,i)=(x(end,i)-x(end-1,i))/dt;
+%         for j=2:length(dxx)-1
+%             dxx(j,i)=(x(j+1,i)-x(j-1,i))/(2*dt);
+%         end
+% end
+% another option is to creare using the known nonlinear function
+ for i=1:length(xFOM)
+ dx(i,:)=xdotNL(0,xFOM(i,:)');
+ end
+ dx=dx(:,n_oc+1:end);
+
+ %
+lambda=0.01; polyorder=1;
+Theta=poolDataie(x,polyorder,delta,gamma,K);
+%for k=1:size(Theta,2)
+%   normTheta(k) = norm(Theta(:,k));
+%    Theta(:,k) = Theta(:,k)/normTheta(k);
+%end
+%m = size(Theta,2);
+Xi = sparsifyDynamics(Theta,dx,lambda,n_oc)  
+
+% reverse of normalization
+%Theta = poolDataie(x,polyorder,delta,gamma);
+%for k=1:length(Xi)
+%    Xi(k,:) = Xi(k,:)/normTheta(k);
+%end
+%poolDataLISTT({'x1','x2','x3','x4','x5','x6','x7'},Xi,N,polyorder,usesine);
+%[tB,xB]=ode45(@(t,x)sparseGalerkinPS(x,Xi),tspan,x0(1:n_oc));% approximate
+%% reconstruction
+xall2 = [];
+dxall2 = [];
+%for i = 1:length(x0list)
+    %x0= x0list(i)*ones(n_oc,1);
+    [tB,xB]=ode45(@(t,x)SparseGalerkinie(t,x,tspan,Xi,polyorder,delta,gamma,K),tspan,x0(1:n_oc));% approximate
+    xall2 = [xall2; xB];
+%end
+xs=xall2;
+%
+figure(1);
+%f.Position = [200 200 700 600];
+%subplot(2,1,1)
+plot(dt*(1:length(x)),x,'k', dt*(1:length(xs)),xs,'r--','linewidth',1.5)
+xlabel('$t$','Interpreter','latex')
+ylabel('$\omega$','Interpreter','latex')
+grid on
+set(gca,'ticklabelinterpreter','latex','Fontsize',15)
+%figure(2)
+%subplot(2,1,2)
+% plot(tspan,xFOM(:,n_oc+1:end),'g')
+% hold on
+% plot(tspan,xB(:,n_oc+1:end),'k--','linewidth',1.5)
+% xlabel('$t$','Interpreter','latex')
+% ylabel('$\omega$','Interpreter','latex')
+% grid on
+% set(gca,'ticklabelinterpreter','latex','Fontsize',15)
+
+%%
+norm_full=norm(x-xs)
+D=data.D;
+H=data.H;
+A=data.A;
+gamma=data.gamma;
+K=data.K;
+omega=data.omega_R;
+const_coeff = (omega./(2*H).*A)'
+x_coeff = - diag(D./(2*H))
+sin_coeff= - diag(omega./(2*H))
+

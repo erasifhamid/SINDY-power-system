@@ -1,0 +1,88 @@
+--------------------------------------------------
+ Power-grid synchronization models
+ Computing parameters for network dynamics models
+--------------------------------------------------
+
+Copyright (C) 2015  Takashi Nishikawa
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2 of the License, or (at your
+option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+The full text of the GNU General Public License can be found in the file
+"License.txt".
+
+http://pg-sync-models.sourceforge.net
+
+
+Summary
+-------
+
+This repository contains a MATLAB toolbox 'pg_sync_models' for computing
+the parameters of the three models for power-grid synchronization
+dynamics, as described in
+
+T. Nishikawa and A. E. Motter, Comparative analysis of existing models
+for power-grid synchronization, New J. Phys. 17, 015012 (2015).
+http://dx.doi.org/10.1088/1367-2630/17/1/015012
+
+The toolbox also contains data files for four of the example systems discussed
+in the article.
+
+
+Files
+-----
+
+README - This file
+Contents.m - List of functions
+
+Computing parameters for network dynamics models:
+
+EN_model.m - Effective network model
+SP_model.m - Structure-preserving model
+SM_model.m - Synchronous motor model
+
+Default methods for estimating dynamic parameters:
+
+default_x_d.m - Transient reactances x'_{d,i}
+default_H.m   - Inertia constants H_i
+default_D.m   - Damping coefficients D_i
+
+Example systems:
+
+test_system_3gen.m  - 3-generator test system
+test_system_10gen.m - 10-generator (New England) test system
+test_system_50gen.m - 50-generator test system
+poland_case2383wp.m - Poland power grid
+
+Others:
+
+dd50cdf.m - MATPOWER data file for the 50-generator test system
+test_system_50gen_dyn_data.mat
+          - Dynamic parameters for the 50-generator test system
+
+
+Installation
+------------
+
+Uncompress the zip file and save the toolbox folder ('pg_sync_models')
+anywhere you wish and add it to the MATLAB path using addpath.
+
+
+How to use the software
+-----------------------
+
+Once the toolbox folder is added to the MATLAB path, you will be able to
+read the help documentation for individual files through 'help EN_model',
+etc.  You can get a list of all functions in the toolbox by 'help
+pg_sync_models'.
